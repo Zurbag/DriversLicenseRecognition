@@ -15,7 +15,7 @@ public class Main {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
         //Путь к файлу
-        File imagePath = new File("img\\1.jpg");
+        File imagePath = new File("img\\4.jpg");
 
         // Загружаем изображение в матрицу OpenCV
         Mat img = Imgcodecs.imread(imagePath.getPath());
@@ -161,6 +161,8 @@ public class Main {
         //Подключем данные
         tesseract.setDatapath(tessdata);
         //Сообщаем шрифты
+        tesseract.setOcrEngineMode(3);
+        tesseract.setPageSegMode(3);
         tesseract.setLanguage("rus+eng");
         //Распознавание данных этот метод работает либо с файлом либо с imageBuffer
         String text = tesseract.doOCR(image);
