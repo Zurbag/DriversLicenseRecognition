@@ -1,10 +1,8 @@
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
+import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 
 import javax.swing.*;
 import java.awt.image.BufferedImage;
@@ -17,13 +15,74 @@ public class Main {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
         //Путь к файлу
-        File imagePath = new File("img\\cd8.jpg");
+        File imagePath = new File("img\\1.jpg");
 
         // Загружаем изображение в матрицу OpenCV
         Mat img = Imgcodecs.imread(imagePath.getPath());
-        BufferedImage bufferedImage = matToBufferedImage(img);
-        System.out.println(getText(bufferedImage));
 
+        // Используем фильтр
+        Mat result = filteringImage(img);
+
+        // Распознаем текст
+        System.out.println(getText(matToBufferedImage(result)));
+        imageShow(result);
+    }
+
+    //Накладываем фильтр повышая четкость
+    public static Mat filteringImage(Mat img){
+        Mat result = new Mat(img.size(), img.type());
+        Imgproc.cvtColor(img, img, Imgproc.COLOR_Luv2LRGB);
+        Imgproc.bilateralFilter(img, result,100,160,120);
+        return result;
+    }
+    //Просто набор методов которые будут полезны в дальнейщем
+    public static void methods(Mat img) {
+        // Тест обработки изображения
+        // Сюда записываем изображение создаем пустое изображение
+        Mat imgEmpty = new Mat(img.size(), img.type());
+
+        // Накладываем фильтры ядром мы проходимся по тексту
+        Mat kernel = new Mat(5, 5, CvType.CV_8UC1, new Scalar(1.0));
+
+        // Применяем различные функции
+
+        // Сужаем темные зоры расширяем светлые
+        // img - к чему применяем
+        // imgEmpty - куда записываем
+        Imgproc.dilate(img, imgEmpty, kernel);
+
+        // Расширяем темные сужаем светлые
+        Imgproc.erode(img, imgEmpty, kernel);
+
+        // Конвертируем изображение в другое цветовое пространство
+        Imgproc.cvtColor(img, imgEmpty, Imgproc.COLOR_BGR2GRAY);
+
+        // Блюр изображения
+        Imgproc.GaussianBlur(img, imgEmpty, new Size(15, 15), 0);
+
+        // Получаем границы изображения
+        Imgproc.Canny(img, imgEmpty, 2, 2);
+
+        // Меняем размер
+        Imgproc.resize(img, imgEmpty, new Size(200, 200));
+
+        // Обрезаем изображение обрезаем по
+        // img.rowRange(100,250) - Y
+        // colRange(50,250) - X
+        Mat imgCrop = img.rowRange(100, 250).colRange(50, 250);
+
+        // Можно обработать часть изображения
+        // берем с исхожного изображения часть которую будем обрабатывать
+        // берем изображение на которое будеп применять
+        Imgproc.erode(img.rowRange(100, 250).colRange(50, 250), img.rowRange(100, 250).colRange(50, 250), kernel);
+
+        //Сохраняем изображение
+        Imgcodecs.imwrite("img\\image.jpg", img);
+
+        imageShow(img);
+        imageShow(imgEmpty);
+        imageShow(imgCrop);
+        // Конец теста
     }
 
     //Преобразование в буфферед image
@@ -67,6 +126,7 @@ public class Main {
         System.arraycopy(buf, 0, data, 0, buf.length);
         return image;
     }
+
     public static void imageShow(Mat img) {
         // Просмотр изображения
         JFrame window = new JFrame("Window:");
@@ -92,6 +152,7 @@ public class Main {
         window.getContentPane().add(screen);
         window.pack();
     }
+
     public static String getText(BufferedImage image) throws TesseractException {
         // Подключаем файлы данных tesseract
         String tessdata = "C:\\Program Files (x86)\\Tesseract-OCR\\tessdata";
