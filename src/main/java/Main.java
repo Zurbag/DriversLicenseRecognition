@@ -8,6 +8,8 @@ import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.File;
+import java.util.Arrays;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws TesseractException {
@@ -15,7 +17,7 @@ public class Main {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
         //Путь к файлу
-        File imagePath = new File("img\\4.jpg");
+        File imagePath = new File("img\\1.jpg");
 
         // Загружаем изображение в матрицу OpenCV
         Mat img = Imgcodecs.imread(imagePath.getPath());
@@ -24,17 +26,21 @@ public class Main {
         Mat result = filteringImage(img);
 
         // Распознаем текст
-        System.out.println(getText(matToBufferedImage(result)));
+        System.out.println(textCleaner(
+                getText(
+                        matToBufferedImage(
+                                result))));
         imageShow(result);
     }
 
     //Накладываем фильтр повышая четкость
-    public static Mat filteringImage(Mat img){
+    public static Mat filteringImage(Mat img) {
         Mat result = new Mat(img.size(), img.type());
         Imgproc.cvtColor(img, img, Imgproc.COLOR_Luv2LRGB);
-        Imgproc.bilateralFilter(img, result,100,160,120);
+        Imgproc.bilateralFilter(img, result, 100, 160, 120);
         return result;
     }
+
     //Просто набор методов которые будут полезны в дальнейщем
     public static void methods(Mat img) {
         // Тест обработки изображения
@@ -127,6 +133,7 @@ public class Main {
         return image;
     }
 
+    //Показать изображение
     public static void imageShow(Mat img) {
         // Просмотр изображения
         JFrame window = new JFrame("Window:");
@@ -153,6 +160,7 @@ public class Main {
         window.pack();
     }
 
+    //Получение текста с изображения
     public static String getText(BufferedImage image) throws TesseractException {
         // Подключаем файлы данных tesseract
         String tessdata = "C:\\Program Files (x86)\\Tesseract-OCR\\tessdata";
@@ -167,5 +175,35 @@ public class Main {
         //Распознавание данных этот метод работает либо с файлом либо с imageBuffer
         String text = tesseract.doOCR(image);
         return text;
+    }
+
+    //Метод очистки текста
+    public static String textCleaner(String text) {
+        //Удаление пустых строк, и символов кроме алфавиных, и слов длинны <=3
+        String adjusted = text.
+                replaceAll("[^A-Za-zА-Яа-я0-9\\. \\n]", "").
+                replaceAll("(?m)^[ \t]*\r?\n", "")
+                ;
+
+        adjusted = adjusted.replaceAll("\b[а-яА-Я]{1,2}\b", "");
+
+
+        //Удалять спец символы не похожие на цифры и буквы
+        //Если в сторке меньше 3 идуших друг за другом симоволов или они разделены пробелами удалять их
+        //ВОДИТЕЛЬСНПЕ УДОСТОВЕРЕНИЕ //Без ошибок и в верхнем регистре
+        //петРОВ // Первая буква с заглавной
+        //PETROV // Первую букву с заглавной
+        //НИКИТА ВЛАДИМИРОВИЧ //Первую букву с заглавной втрое слово с заглавной
+        //NIKITA VLADIMIRGVICH  //Первую букву с заглавной втрое слово с заглавной
+        //06.01.1991 //приводить к дате в любом случае
+        //БУРЯТСКОЙ РЕСП.  //Первую букву с заглавной втрое слово с заглавной
+        //BURYATSKOY RESP, //Первую букву с заглавной втрое слово с заглавной
+        //43.04.2013 4b) 13.04.2023 // отсавить только цифры похожие на дату приводить к заглавной
+        //ГИБДД 2301 // Не изменять
+        //GIBDD 2301 // Не изменять
+        //22 12 2342112 // убрать пробелы, проверять длинну
+        //ЧУВАШСКАЯ РЕСП. //Первую букву с заглавной втрое слово с заглавной
+        //BURYATSKAY RESP. // //Первую букву с заглавной втрое слово с заглавной
+        return adjusted;
     }
 }
